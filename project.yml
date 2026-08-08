@@ -1,0 +1,16 @@
+name: KioskApp
+options:
+  bundleIdPrefix: com.chinchin
+targets:
+  KioskApp:
+    type: application
+    platform: iOS
+    deploymentTarget: "9.0"
+    sources: [KioskApp]
+    info:
+      path: KioskApp/Info.plist
+      properties:
+        NSCameraUsageDescription: "Requerido para tomar selfie"
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+        UIRequiresFullScreen: true
