@@ -6,6 +6,10 @@ targets:
     type: application
     platform: iOS
     deploymentTarget: "9.0"
+    settings:
+      ARCHS: armv7
+      VALID_ARCHS: armv7
+      ONLY_ACTIVE_ARCH: NO
     sources: [KioskApp]
     info:
       path: KioskApp/Info.plist

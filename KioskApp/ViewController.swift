@@ -58,7 +58,7 @@ class ViewController: UIViewController, WKScriptMessageHandler, UIImagePickerCon
     
     func loadKiosk() {
         let ip = UserDefaults.standard.string(forKey: "kioskIP") ?? "192.168.0.112"
-        if let url = URL(string: "http://\\(ip):3001/kiosk-legacy") {
+        if let url = URL(string: "http://\(ip):3001/kiosk-legacy") {
             webView.load(URLRequest(url: url))
         }
     }
@@ -112,7 +112,7 @@ class ViewController: UIViewController, WKScriptMessageHandler, UIImagePickerCon
         if let image = info[.originalImage] as? UIImage,
            let imageData = image.jpegData(compressionQuality: 0.7) {
             let base64 = imageData.base64EncodedString()
-            let js = "var img = new Image(); img.onload = function() { window.generateStoryCanvas(img); }; img.src = 'data:image/jpeg;base64,\\(base64)';"
+            let js = "var img = new Image(); img.onload = function() { window.generateStoryCanvas(img); }; img.src = 'data:image/jpeg;base64,\(base64)';"
             webView.evaluateJavaScript(js, completionHandler: nil)
         }
     }
