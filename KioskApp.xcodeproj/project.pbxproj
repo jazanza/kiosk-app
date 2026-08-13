@@ -3,19 +3,23 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 52;
+	objectVersion = 51;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		24EF13EEE24B9E592508B2C0 /* NativeScreensaverViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAE9A2FB937D335A9B43833D /* NativeScreensaverViewController.swift */; };
 		3E5E43FFBCC16981D830B92C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C69EA0B2B5DF3ED128F260F1 /* AppDelegate.swift */; };
+		D3BCA26EA147110D8C0D8BA4 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8C0BB858659B47717976BCD /* NetworkMonitor.swift */; };
 		DBF80CAD459D3F4F26DD7BFC /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A929454CFB4310183E0F6F2 /* ViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0CEBEDBFBF02DEC30CEF8507 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		3A929454CFB4310183E0F6F2 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
-		B844D1873BE1BDE00E81E8B5 /* KioskApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KioskApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B844D1873BE1BDE00E81E8B5 /* KioskApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = KioskApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C69EA0B2B5DF3ED128F260F1 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		C8C0BB858659B47717976BCD /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
+		FAE9A2FB937D335A9B43833D /* NativeScreensaverViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeScreensaverViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -40,6 +44,8 @@
 			children = (
 				C69EA0B2B5DF3ED128F260F1 /* AppDelegate.swift */,
 				0CEBEDBFBF02DEC30CEF8507 /* Info.plist */,
+				FAE9A2FB937D335A9B43833D /* NativeScreensaverViewController.swift */,
+				C8C0BB858659B47717976BCD /* NetworkMonitor.swift */,
 				3A929454CFB4310183E0F6F2 /* ViewController.swift */,
 			);
 			path = KioskApp;
@@ -70,6 +76,8 @@
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 1200;
+				TargetAttributes = {
+				};
 			};
 			buildConfigurationList = 83485FCF30708B1D0D3D3C23 /* Build configuration list for PBXProject "KioskApp" */;
 			compatibilityVersion = "Xcode 11.0";
@@ -94,6 +102,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				3E5E43FFBCC16981D830B92C /* AppDelegate.swift in Sources */,
+				24EF13EEE24B9E592508B2C0 /* NativeScreensaverViewController.swift in Sources */,
+				D3BCA26EA147110D8C0D8BA4 /* NetworkMonitor.swift in Sources */,
 				DBF80CAD459D3F4F26DD7BFC /* ViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -104,6 +114,7 @@
 		2203E2F625B9398D4EB946D6 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = armv7;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = KioskApp/Info.plist;
@@ -112,9 +123,11 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = com.chinchin.KioskApp;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = 2;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALID_ARCHS = armv7;
 			};
 			name = Release;
 		};
@@ -238,6 +251,7 @@
 		E0BC716F370F2964512A912F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = armv7;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = KioskApp/Info.plist;
@@ -246,9 +260,11 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = com.chinchin.KioskApp;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = 2;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALID_ARCHS = armv7;
 			};
 			name = Debug;
 		};
