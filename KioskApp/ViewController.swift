@@ -20,13 +20,18 @@ final class KioskViewController: UIViewController,
     // MARK: - Public config
 
     /// Server IP, set by AppDelegate after user configures it.
+    /// NOTE: didSet calls loadKiosk() only after the view is loaded to prevent
+    /// force-unwrap crash on webView before viewDidLoad() runs.
     var serverIP: String = "" {
         didSet {
             UserDefaults.standard.set(serverIP, forKey: "kioskIP")
             networkMonitor?.stop()
             networkMonitor = NetworkMonitor(host: serverIP)
             setupNetworkMonitor()
-            loadKiosk()
+            // Only load if the view hierarchy is ready
+            if isViewLoaded {
+                loadKiosk()
+            }
         }
     }
 
@@ -34,7 +39,7 @@ final class KioskViewController: UIViewController,
 
     // MARK: - Private UI
 
-    private var webView: WKWebView!
+    private var webView: WKWebView?  // Optional — set in viewDidLoad
     private var loadingTimer: Timer?
 
     // Native "Connecting..." overlay — shown instead of blank screen
@@ -42,7 +47,7 @@ final class KioskViewController: UIViewController,
     private let connectingLabel = UILabel()
     private let connectingSpinner: UIActivityIndicatorView = {
         let s = UIActivityIndicatorView()
-        s.activityIndicatorViewStyle = .whiteLarge
+        s.style = .whiteLarge
         s.color = .white
         return s
     }()
@@ -110,13 +115,13 @@ final class KioskViewController: UIViewController,
         }
 
         webView = WKWebView(frame: view.bounds, configuration: config)
-        webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        webView.navigationDelegate = self
-        webView.scrollView.bounces = false
-        webView.scrollView.isScrollEnabled = false     // kiosk: disable scroll
-        webView.isOpaque = false
-        webView.backgroundColor = .black
-        view.addSubview(webView)
+        webView?.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        webView?.navigationDelegate = self
+        webView?.scrollView.bounces = false
+        webView?.scrollView.isScrollEnabled = false
+        webView?.isOpaque = false
+        webView?.backgroundColor = .black
+        view.addSubview(webView!)
     }
 
     // MARK: - Connecting overlay
@@ -205,7 +210,7 @@ final class KioskViewController: UIViewController,
 
         isPageLoaded = false
         showConnecting(message: "Cargando Chin Chin Kiosk...")
-        webView.load(URLRequest(url: url))
+        webView?.load(URLRequest(url: url))
 
         // Safety timeout: if page doesn't respond in 20s, show retry
         loadingTimer?.invalidate()
@@ -216,7 +221,7 @@ final class KioskViewController: UIViewController,
 
     @objc private func onLoadTimeout() {
         guard !isPageLoaded else { return }
-        webView.stopLoading()
+        webView?.stopLoading()
         showRetry()
         scheduleAutoRetry()
     }

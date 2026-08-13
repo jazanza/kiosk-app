@@ -46,13 +46,17 @@ final class NativeScreensaverViewController: UIViewController {
     private var playerObserver: Any?
 
     // Overlay UI
+    // NOTE: gradientView is a dedicated UIView with a CAGradientLayer, inserted as a
+    // subview AFTER backgroundView so it renders on top of images (sublayers of view.layer
+    // render BEHIND subviews in UIKit — that was the original bug causing images to vanish).
+    private let gradientView = UIView()
     private let gradientLayer = CAGradientLayer()
     private let brandLabel = UILabel()
     private let tapLabel = UILabel()
     private let metaLabel = UILabel()       // selfie name / promo text
     private let loadingIndicator: UIActivityIndicatorView = {
         let s = UIActivityIndicatorView()
-        s.activityIndicatorViewStyle = .whiteLarge
+        s.style = .whiteLarge
         s.color = .white
         return s
     }()
@@ -101,7 +105,12 @@ final class NativeScreensaverViewController: UIViewController {
             backgroundView.addSubview(iv)
         }
 
-        // Gradient overlay (top and bottom vignette)
+        // Gradient overlay: must be a subview AFTER backgroundView so it draws
+        // on top of images. If we add gradientLayer to view.layer directly, UIKit
+        // draws it behind all subviews (sublayer < subview in z-order).
+        gradientView.frame = view.bounds
+        gradientView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        gradientView.isUserInteractionEnabled = false
         gradientLayer.frame = view.bounds
         gradientLayer.colors = [
             UIColor.black.withAlphaComponent(0.55).cgColor,
@@ -110,7 +119,8 @@ final class NativeScreensaverViewController: UIViewController {
             UIColor.black.withAlphaComponent(0.70).cgColor
         ]
         gradientLayer.locations = [0.0, 0.25, 0.65, 1.0]
-        view.layer.addSublayer(gradientLayer)
+        gradientView.layer.addSublayer(gradientLayer)
+        view.addSubview(gradientView)
 
         // Brand label (top center)
         brandLabel.text = "🍺 CHIN CHIN"

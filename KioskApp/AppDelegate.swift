@@ -69,7 +69,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Transition with a clean crossfade
         let transition = CATransition()
         transition.duration = 0.5
-        transition.type = CATransitionType(rawValue: kCATransitionFade)
+        transition.type = CATransitionType(rawValue: CATransitionType.fade.rawValue)
         window?.layer.add(transition, forKey: nil)
         window?.rootViewController = kiosk
 
