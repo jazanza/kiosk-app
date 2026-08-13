@@ -40,7 +40,12 @@ final class KioskViewController: UIViewController,
     // Native "Connecting..." overlay — shown instead of blank screen
     private let connectingOverlay = UIView()
     private let connectingLabel = UILabel()
-    private let connectingSpinner = UIActivityIndicatorView(activityIndicatorStyle: .whiteLarge)
+    private let connectingSpinner: UIActivityIndicatorView = {
+        let s = UIActivityIndicatorView()
+        s.activityIndicatorViewStyle = .whiteLarge
+        s.color = .white
+        return s
+    }()
     private let retryButton = UIButton(type: .system)
 
     // MARK: - Network

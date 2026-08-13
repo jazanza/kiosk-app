@@ -50,7 +50,12 @@ final class NativeScreensaverViewController: UIViewController {
     private let brandLabel = UILabel()
     private let tapLabel = UILabel()
     private let metaLabel = UILabel()       // selfie name / promo text
-    private let loadingIndicator = UIActivityIndicatorView(activityIndicatorStyle: .whiteLarge)
+    private let loadingIndicator: UIActivityIndicatorView = {
+        let s = UIActivityIndicatorView()
+        s.activityIndicatorViewStyle = .whiteLarge
+        s.color = .white
+        return s
+    }()
 
     // MARK: - Lifecycle
 

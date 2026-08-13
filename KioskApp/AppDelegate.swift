@@ -69,7 +69,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Transition with a clean crossfade
         let transition = CATransition()
         transition.duration = 0.5
-        transition.type = .fade
+        transition.type = CATransitionType(rawValue: kCATransitionFade)
         window?.layer.add(transition, forKey: nil)
         window?.rootViewController = kiosk
 
@@ -81,20 +81,24 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     private var inactivityTimer: Timer?
     private let inactivityTimeout: TimeInterval = 3 * 60 // 3 minutes
+    private var lastKioskIP: String = ""
 
     private func startInactivityTimer(serverIP: String) {
+        lastKioskIP = serverIP
         inactivityTimer?.invalidate()
-        inactivityTimer = Timer.scheduledTimer(withTimeInterval: inactivityTimeout, repeats: false) { [weak self] _ in
-            self?.startScreensaver(serverIP: serverIP)
-        }
+        // Use selector-based Timer for iOS 9 compatibility (closure Timer is iOS 10+)
+        inactivityTimer = Timer.scheduledTimer(
+            timeInterval: inactivityTimeout,
+            target: self,
+            selector: #selector(returnToScreensaverFromTimer),
+            userInfo: nil,
+            repeats: false
+        )
     }
 
-    // Reset inactivity timer on any user touch
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        super.touchesBegan(touches, with: event)
-        if let kiosk = window?.rootViewController as? KioskViewController {
-            startInactivityTimer(serverIP: kiosk.serverIP)
-        }
+    @objc private func returnToScreensaverFromTimer() {
+        guard !lastKioskIP.isEmpty else { return }
+        startScreensaver(serverIP: lastKioskIP)
     }
 
     // MARK: - IP Configuration alert
