@@ -345,7 +345,18 @@ final class KioskViewController: UIViewController,
         guard let imageData = resized.jpegData(compressionQuality: 0.70) else { return }
         let base64 = imageData.base64EncodedString()
 
-        let js = "if (window.receiveNativePhoto) { window.receiveNativePhoto('data:image/jpeg;base64,\(base64)'); }"
+        let js = """
+        (function() {
+            var dataUri = 'data:image/jpeg;base64,\(base64)';
+            if (typeof window.receiveNativePhoto === 'function') {
+                window.receiveNativePhoto(dataUri);
+            } else if (typeof window.generateStoryCanvas === 'function') {
+                var img = new Image();
+                img.onload = function() { window.generateStoryCanvas(img); };
+                img.src = dataUri;
+            }
+        })();
+        """
         webView?.evaluateJavaScript(js, completionHandler: nil)
     }
 

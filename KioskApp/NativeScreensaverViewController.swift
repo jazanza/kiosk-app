@@ -121,39 +121,46 @@ final class NativeScreensaverViewController: UIViewController {
         gradientView.layer.addSublayer(gradientLayer)
         view.addSubview(gradientView)
 
-        // Brand label (top center)
-        brandLabel.text = "🍺 CHIN CHIN"
-        brandLabel.font = UIFont(name: "AvenirNext-Heavy", size: 18) ?? UIFont.boldSystemFont(ofSize: 18)
+        // Top prominent label: "TOCA PARA EMPEZAR"
+        brandLabel.text = "TOCA PARA EMPEZAR"
+        brandLabel.font = UIFont(name: "AvenirNext-Heavy", size: 28) ?? UIFont.boldSystemFont(ofSize: 28)
         brandLabel.textColor = UIColor(red: 0.8, green: 1.0, blue: 0.0, alpha: 1.0) // brand neon
         brandLabel.textAlignment = .center
-        brandLabel.alpha = 0.9
+        brandLabel.alpha = 0.95
+        brandLabel.layer.shadowColor = UIColor(red: 0.8, green: 1.0, blue: 0.0, alpha: 0.6).cgColor
+        brandLabel.layer.shadowOffset = .zero
+        brandLabel.layer.shadowRadius = 10
+        brandLabel.layer.shadowOpacity = 0.8
         brandLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(brandLabel)
 
-        // Discreet/Hidden Settings Button (top right corner, 80x80 touch target)
-        // Hidden from customers — double tap or tap to access admin config
-        settingsButton.setTitle("⚙️", for: .normal)
-        settingsButton.titleLabel?.font = UIFont.systemFont(ofSize: 14)
-        settingsButton.setTitleColor(UIColor.white.withAlphaComponent(0.20), for: .normal)
+        // Invisible Admin Settings Target (top right corner, 80x80 touch target, 3-second long press only)
+        settingsButton.setTitle("", for: .normal)
         settingsButton.backgroundColor = .clear
         settingsButton.translatesAutoresizingMaskIntoConstraints = false
-        settingsButton.addTarget(self, action: #selector(handleSettingsTap), for: .touchUpInside)
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleSettingsLongPress))
+        longPress.minimumPressDuration = 3.0
+        settingsButton.addGestureRecognizer(longPress)
         view.addSubview(settingsButton)
 
-        // Selfie/promo meta label (bottom, above tap label)
-        metaLabel.font = UIFont(name: "AvenirNext-Bold", size: 14) ?? UIFont.boldSystemFont(ofSize: 14)
+        // Selfie/promo meta label (bottom, above bottom tap label)
+        metaLabel.font = UIFont(name: "AvenirNext-Bold", size: 16) ?? UIFont.boldSystemFont(ofSize: 16)
         metaLabel.textColor = .white
         metaLabel.textAlignment = .center
         metaLabel.alpha = 0
         metaLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(metaLabel)
 
-        // "TOCA PARA EMPEZAR" pulsing label (bottom)
-        tapLabel.text = "TOCA PARA EMPEZAR"
-        tapLabel.font = UIFont(name: "AvenirNext-Heavy", size: 13) ?? UIFont.boldSystemFont(ofSize: 13)
+        // "TOCA PARA EMPEZAR" pulsing bottom label (large and vibrant)
+        tapLabel.text = "✨ TOCA LA PANTALLA PARA EMPEZAR ✨"
+        tapLabel.font = UIFont(name: "AvenirNext-Heavy", size: 24) ?? UIFont.boldSystemFont(ofSize: 24)
         tapLabel.textColor = UIColor(red: 0.8, green: 1.0, blue: 0.0, alpha: 1.0)
         tapLabel.textAlignment = .center
         tapLabel.alpha = 1.0
+        tapLabel.layer.shadowColor = UIColor.black.cgColor
+        tapLabel.layer.shadowOffset = CGSize(width: 0, height: 2)
+        tapLabel.layer.shadowRadius = 4
+        tapLabel.layer.shadowOpacity = 0.9
         tapLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(tapLabel)
 
@@ -164,18 +171,18 @@ final class NativeScreensaverViewController: UIViewController {
 
         // Layout
         NSLayoutConstraint.activate([
-            brandLabel.topAnchor.constraint(equalTo: view.topAnchor, constant: 24),
+            brandLabel.topAnchor.constraint(equalTo: view.topAnchor, constant: 32),
             brandLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
 
-            settingsButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 10),
-            settingsButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
-            settingsButton.widthAnchor.constraint(equalToConstant: 60),
-            settingsButton.heightAnchor.constraint(equalToConstant: 60),
+            settingsButton.topAnchor.constraint(equalTo: view.topAnchor),
+            settingsButton.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            settingsButton.widthAnchor.constraint(equalToConstant: 80),
+            settingsButton.heightAnchor.constraint(equalToConstant: 80),
 
-            tapLabel.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -28),
+            tapLabel.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -36),
             tapLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
 
-            metaLabel.bottomAnchor.constraint(equalTo: tapLabel.topAnchor, constant: -12),
+            metaLabel.bottomAnchor.constraint(equalTo: tapLabel.topAnchor, constant: -16),
             metaLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
             metaLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
 
@@ -186,8 +193,10 @@ final class NativeScreensaverViewController: UIViewController {
         startPulseAnimation()
     }
 
-    @objc private func handleSettingsTap() {
-        onConfigureIP?()
+    @objc private func handleSettingsLongPress(_ gesture: UILongPressGestureRecognizer) {
+        if gesture.state == .began {
+            onConfigureIP?()
+        }
     }
 
     private func setupTapGesture() {
