@@ -87,25 +87,9 @@ final class KioskViewController: UIViewController,
         let config = WKWebViewConfiguration()
         let contentController = WKUserContentController()
 
-        // JS Bridge: intercept selfie button and redirect to native camera
+        // JS Bridges: camera and navigation/screensaver flow
         contentController.add(self, name: "cameraHandler")
-        let cameraJS = """
-        (function() {
-            var interval = setInterval(function() {
-                var btn = document.querySelector('.camera-label-btn');
-                if (btn && !btn.dataset.hijacked) {
-                    btn.dataset.hijacked = 'true';
-                    btn.innerHTML = '📷 TOMAR SELFIE';
-                    btn.onclick = function(e) {
-                        e.preventDefault();
-                        window.webkit.messageHandlers.cameraHandler.postMessage('openFrontCamera');
-                    };
-                }
-            }, 500);
-        })();
-        """
-        let script = WKUserScript(source: cameraJS, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
-        contentController.addUserScript(script)
+        contentController.add(self, name: "kioskHandler")
         config.userContentController = contentController
 
         // Enable video inline (required for any video playback in WKWebView)
@@ -213,15 +197,16 @@ final class KioskViewController: UIViewController,
         }
     }
 
-    // MARK: - Hidden settings button
+    // MARK: - Invisible admin settings touch target
 
     private func setupSettingsButton() {
-        settingsButton.setTitle("⚙️", for: .normal)
-        settingsButton.titleLabel?.font = UIFont.systemFont(ofSize: 18)
-        settingsButton.setTitleColor(UIColor.white.withAlphaComponent(0.4), for: .normal)
-        settingsButton.frame = CGRect(x: view.bounds.width - 60, y: 10, width: 50, height: 50)
+        // Invisible 80x80 touch target at top-right corner
+        settingsButton.frame = CGRect(x: view.bounds.width - 80, y: 0, width: 80, height: 80)
+        settingsButton.backgroundColor = .clear
         settingsButton.autoresizingMask = [.flexibleLeftMargin, .flexibleBottomMargin]
-        settingsButton.addTarget(self, action: #selector(showSettings), for: .touchUpInside)
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(showSettings))
+        longPress.minimumPressDuration = 2.0
+        settingsButton.addGestureRecognizer(longPress)
         view.addSubview(settingsButton)
         view.bringSubviewToFront(settingsButton)
     }
@@ -301,9 +286,9 @@ final class KioskViewController: UIViewController,
     @objc func showSettings() {
         loadingTimer?.invalidate()
         retryTimer?.invalidate()
-        let currentSaved = sanitizeIP(UserDefaults.standard.string(forKey: "kioskIP") ?? "192.168.1.119")
-        let defaultPromptIP = currentSaved.isEmpty ? "192.168.1.119" : currentSaved
-        let alert = UIAlertController(title: "⚙️ Servidor", message: "IP del servidor Node.js\n(ej: \(defaultPromptIP))", preferredStyle: .alert)
+        let currentSaved = sanitizeIP(UserDefaults.standard.string(forKey: "kioskIP") ?? "MacBook-Air-de-Jose.local")
+        let defaultPromptIP = currentSaved.isEmpty ? "MacBook-Air-de-Jose.local" : currentSaved
+        let alert = UIAlertController(title: "⚙️ Servidor", message: "IP o nombre de tu Mac:\n(ej: \(defaultPromptIP))", preferredStyle: .alert)
         alert.addTextField { tf in
             tf.text = defaultPromptIP
             tf.keyboardType = .numbersAndPunctuation
@@ -325,6 +310,12 @@ final class KioskViewController: UIViewController,
            let msg = message.body as? String,
            msg == "openFrontCamera" {
             DispatchQueue.main.async { self.openFrontCamera() }
+        } else if message.name == "kioskHandler",
+                  let msg = message.body as? String,
+                  msg == "returnToScreensaver" {
+            DispatchQueue.main.async {
+                (UIApplication.shared.delegate as? AppDelegate)?.startScreensaver(serverIP: self.serverIP)
+            }
         }
     }
 
@@ -342,24 +333,19 @@ final class KioskViewController: UIViewController,
 
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
         picker.dismiss(animated: true)
-        guard let image = info[.originalImage] as? UIImage,
-              let imageData = image.jpegData(compressionQuality: 0.75) else { return }
+        guard let originalImage = info[.originalImage] as? UIImage else { return }
 
+        // Downscale image to 810x1080 to keep memory under 150KB and prevent WebKit crash on iOS 9
+        let targetSize = CGSize(width: 810, height: 1080)
+        UIGraphicsBeginImageContextWithOptions(targetSize, false, 1.0)
+        originalImage.draw(in: CGRect(origin: .zero, size: targetSize))
+        let resized = UIGraphicsGetImageFromCurrentImageContext() ?? originalImage
+        UIGraphicsEndImageContext()
+
+        guard let imageData = resized.jpegData(compressionQuality: 0.70) else { return }
         let base64 = imageData.base64EncodedString()
-        // Send image back to the web app via JS bridge
-        let js = """
-        (function() {
-            var img = new Image();
-            img.onload = function() {
-                if (typeof window.generateStoryCanvas === 'function') {
-                    window.generateStoryCanvas(img);
-                } else if (typeof window.receiveNativePhoto === 'function') {
-                    window.receiveNativePhoto(img);
-                }
-            };
-            img.src = 'data:image/jpeg;base64,\(base64)';
-        })();
-        """
+
+        let js = "if (window.receiveNativePhoto) { window.receiveNativePhoto('data:image/jpeg;base64,\(base64)'); }"
         webView?.evaluateJavaScript(js, completionHandler: nil)
     }
 
