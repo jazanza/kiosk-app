@@ -20,6 +20,22 @@ import UIKit
 //   If not set, an alert is presented before Phase 2 starts.
 //   Long-press top-right corner (3s) in Phase 2 to reconfigure.
 
+// MARK: - KioskWindow
+// Intercepts all touch events globally to reset the inactivity timer
+// WITHOUT attaching UIGestureRecognizers that cancel WKWebView touch/click events.
+final class KioskWindow: UIWindow {
+    var onUserInteraction: (() -> Void)?
+
+    override func sendEvent(_ event: UIEvent) {
+        super.sendEvent(event)
+        if event.type == .touches, let touches = event.allTouches {
+            for touch in touches where touch.phase == .began {
+                onUserInteraction?()
+            }
+        }
+    }
+}
+
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
@@ -33,38 +49,57 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Prevent iPad from sleeping (kiosk mode)
         UIApplication.shared.isIdleTimerDisabled = true
 
-        window = UIWindow(frame: UIScreen.main.bounds)
-        window?.backgroundColor = .black
+        let kioskWin = KioskWindow(frame: UIScreen.main.bounds)
+        kioskWin.backgroundColor = .black
+        kioskWin.onUserInteraction = { [weak self] in
+            self?.resetInactivityTimer()
+        }
+        window = kioskWin
+        window?.makeKeyAndVisible()
 
-        let savedIP = UserDefaults.standard.string(forKey: "kioskIP") ?? ""
+        let rawIP = UserDefaults.standard.string(forKey: "kioskIP") ?? ""
+        let savedIP = sanitizeIP(rawIP)
 
         if savedIP.isEmpty {
-            // First launch: ask for IP, then start screensaver
-            presentIPConfig(from: nil)
+            // Try Bonjour hostname or prompt
+            let autoHost = "MacBook-Air-de-Jose.local"
+            UserDefaults.standard.set(autoHost, forKey: "kioskIP")
+            startScreensaver(serverIP: autoHost)
         } else {
             startScreensaver(serverIP: savedIP)
         }
 
-        window?.makeKeyAndVisible()
         return true
+    }
+
+    private func resetInactivityTimer() {
+        if let kiosk = window?.rootViewController as? KioskViewController {
+            startInactivityTimer(serverIP: kiosk.serverIP)
+        }
     }
 
     // MARK: - Flow control
 
     /// Shows the native screensaver. When user taps, transitions to kiosk.
     func startScreensaver(serverIP: String) {
+        let cleanIP = sanitizeIP(serverIP)
         let screensaver = NativeScreensaverViewController()
-        screensaver.serverBaseURL = "http://\(serverIP):3001"
+        screensaver.serverBaseURL = "http://\(cleanIP):3001"
+        screensaver.serverIP = cleanIP
         screensaver.onStart = { [weak self] in
-            self?.startKiosk(serverIP: serverIP)
+            self?.startKiosk(serverIP: cleanIP)
+        }
+        screensaver.onConfigureIP = { [weak self, weak screensaver] in
+            self?.presentIPConfig(from: screensaver)
         }
         window?.rootViewController = screensaver
     }
 
     /// Shows the WKWebView kiosk. After inactivity, returns to screensaver.
     func startKiosk(serverIP: String) {
+        let cleanIP = sanitizeIP(serverIP)
         let kiosk = KioskViewController()
-        kiosk.serverIP = serverIP
+        kiosk.serverIP = cleanIP
 
         // Transition with a clean crossfade
         let transition = CATransition()
@@ -74,7 +109,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         window?.rootViewController = kiosk
 
         // Start inactivity timer: after 3 minutes with no interaction → screensaver
-        startInactivityTimer(serverIP: serverIP)
+        startInactivityTimer(serverIP: cleanIP)
     }
 
     // MARK: - Inactivity / screensaver return
@@ -84,7 +119,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     private var lastKioskIP: String = ""
 
     private func startInactivityTimer(serverIP: String) {
-        lastKioskIP = serverIP
+        lastKioskIP = sanitizeIP(serverIP)
         inactivityTimer?.invalidate()
         // Use selector-based Timer for iOS 9 compatibility (closure Timer is iOS 10+)
         inactivityTimer = Timer.scheduledTimer(
@@ -103,36 +138,50 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     // MARK: - IP Configuration alert
 
-    private func presentIPConfig(from viewController: UIViewController?) {
-        let savedIP = UserDefaults.standard.string(forKey: "kioskIP") ?? "192.168.0.105"
+    func presentIPConfig(from viewController: UIViewController?) {
+        let currentSaved = sanitizeIP(UserDefaults.standard.string(forKey: "kioskIP") ?? "MacBook-Air-de-Jose.local")
+        let defaultPromptIP = currentSaved.isEmpty ? "MacBook-Air-de-Jose.local" : currentSaved
         let alert = UIAlertController(
-            title: "⚙️ Configuración",
-            message: "Ingresa la IP del servidor Chin Chin\n(ej: 192.168.0.105)",
+            title: "⚙️ Configuración Servidor",
+            message: "Ingresa la IP o nombre de tu Mac:\n(ej: \(defaultPromptIP) o 192.168.1.119)",
             preferredStyle: .alert
         )
         alert.addTextField { tf in
-            tf.text = savedIP
+            tf.text = defaultPromptIP
             tf.keyboardType = .numbersAndPunctuation
-            tf.placeholder = "192.168.0.105"
+            tf.placeholder = "192.168.1.119"
         }
         alert.addAction(UIAlertAction(title: "Conectar", style: .default) { [weak self] _ in
-            let ip = alert.textFields?.first?.text ?? savedIP
-            let finalIP = ip.isEmpty ? savedIP : ip
+            let rawInput = alert.textFields?.first?.text ?? defaultPromptIP
+            let finalIP = sanitizeIP(rawInput.isEmpty ? defaultPromptIP : rawInput)
             UserDefaults.standard.set(finalIP, forKey: "kioskIP")
             self?.startScreensaver(serverIP: finalIP)
         })
 
-        // Present on a transparent root VC so the alert shows before anything else loads
-        if viewController == nil {
+        if let vc = viewController {
+            vc.present(alert, animated: true)
+        } else {
             let blankVC = UIViewController()
             blankVC.view.backgroundColor = .black
             window?.rootViewController = blankVC
-            // Small delay to ensure the window is visible before presenting
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 blankVC.present(alert, animated: true)
             }
-        } else {
-            viewController?.present(alert, animated: true)
         }
     }
+}
+
+// MARK: - IP Sanitizer Helper
+
+func sanitizeIP(_ input: String) -> String {
+    var cleaned = input.trimmingCharacters(in: .whitespacesAndNewlines)
+    cleaned = cleaned.replacingOccurrences(of: "http://", with: "")
+    cleaned = cleaned.replacingOccurrences(of: "https://", with: "")
+    if let colonIndex = cleaned.firstIndex(of: ":") {
+        cleaned = String(cleaned[..<colonIndex])
+    }
+    if let slashIndex = cleaned.firstIndex(of: "/") {
+        cleaned = String(cleaned[..<slashIndex])
+    }
+    return cleaned
 }

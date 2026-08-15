@@ -52,6 +52,8 @@ final class KioskViewController: UIViewController,
         return s
     }()
     private let retryButton = UIButton(type: .system)
+    private let changeIPButton = UIButton(type: .system)
+    private let settingsButton = UIButton(type: .system)
 
     // MARK: - Network
 
@@ -135,29 +137,52 @@ final class KioskViewController: UIViewController,
         connectingSpinner.translatesAutoresizingMaskIntoConstraints = false
         connectingLabel.translatesAutoresizingMaskIntoConstraints = false
         retryButton.translatesAutoresizingMaskIntoConstraints = false
+        changeIPButton.translatesAutoresizingMaskIntoConstraints = false
 
         connectingLabel.text = "Conectando con el servidor..."
-        connectingLabel.font = UIFont(name: "AvenirNext-Medium", size: 14) ?? UIFont.systemFont(ofSize: 14)
-        connectingLabel.textColor = .lightGray
+        connectingLabel.font = UIFont(name: "AvenirNext-Medium", size: 20) ?? UIFont.systemFont(ofSize: 20)
+        connectingLabel.textColor = .white
         connectingLabel.textAlignment = .center
+        connectingLabel.numberOfLines = 3
 
-        retryButton.setTitle("Reintentar", for: .normal)
-        retryButton.titleLabel?.font = UIFont(name: "AvenirNext-Bold", size: 14) ?? UIFont.boldSystemFont(ofSize: 14)
+        retryButton.setTitle("🔄 Reintentar", for: .normal)
+        retryButton.titleLabel?.font = UIFont(name: "AvenirNext-Bold", size: 18) ?? UIFont.boldSystemFont(ofSize: 18)
         retryButton.tintColor = UIColor(red: 0.8, green: 1.0, blue: 0.0, alpha: 1.0)
+        retryButton.backgroundColor = UIColor.white.withAlphaComponent(0.15)
+        retryButton.layer.cornerRadius = 12
+        retryButton.contentEdgeInsets = UIEdgeInsets(top: 10, left: 20, bottom: 10, right: 20)
         retryButton.isHidden = true
         retryButton.addTarget(self, action: #selector(retryLoad), for: .touchUpInside)
+
+        changeIPButton.setTitle("⚙️ Cambiar IP", for: .normal)
+        changeIPButton.titleLabel?.font = UIFont(name: "AvenirNext-Bold", size: 18) ?? UIFont.boldSystemFont(ofSize: 18)
+        changeIPButton.tintColor = .white
+        changeIPButton.backgroundColor = UIColor.white.withAlphaComponent(0.20)
+        changeIPButton.layer.cornerRadius = 12
+        changeIPButton.contentEdgeInsets = UIEdgeInsets(top: 10, left: 20, bottom: 10, right: 20)
+        changeIPButton.isHidden = true
+        changeIPButton.addTarget(self, action: #selector(showSettings), for: .touchUpInside)
 
         connectingOverlay.addSubview(connectingSpinner)
         connectingOverlay.addSubview(connectingLabel)
         connectingOverlay.addSubview(retryButton)
+        connectingOverlay.addSubview(changeIPButton)
 
         NSLayoutConstraint.activate([
             connectingSpinner.centerXAnchor.constraint(equalTo: connectingOverlay.centerXAnchor),
-            connectingSpinner.centerYAnchor.constraint(equalTo: connectingOverlay.centerYAnchor, constant: -20),
-            connectingLabel.topAnchor.constraint(equalTo: connectingSpinner.bottomAnchor, constant: 16),
-            connectingLabel.centerXAnchor.constraint(equalTo: connectingOverlay.centerXAnchor),
-            retryButton.topAnchor.constraint(equalTo: connectingLabel.bottomAnchor, constant: 20),
-            retryButton.centerXAnchor.constraint(equalTo: connectingOverlay.centerXAnchor),
+            connectingSpinner.centerYAnchor.constraint(equalTo: connectingOverlay.centerYAnchor, constant: -50),
+
+            connectingLabel.topAnchor.constraint(equalTo: connectingSpinner.bottomAnchor, constant: 20),
+            connectingLabel.leadingAnchor.constraint(equalTo: connectingOverlay.leadingAnchor, constant: 40),
+            connectingLabel.trailingAnchor.constraint(equalTo: connectingOverlay.trailingAnchor, constant: -40),
+
+            retryButton.topAnchor.constraint(equalTo: connectingLabel.bottomAnchor, constant: 30),
+            retryButton.centerXAnchor.constraint(equalTo: connectingOverlay.centerXAnchor, constant: -110),
+            retryButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 180),
+
+            changeIPButton.topAnchor.constraint(equalTo: connectingLabel.bottomAnchor, constant: 30),
+            changeIPButton.centerXAnchor.constraint(equalTo: connectingOverlay.centerXAnchor, constant: 110),
+            changeIPButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 180),
         ])
 
         connectingSpinner.startAnimating()
@@ -168,14 +193,16 @@ final class KioskViewController: UIViewController,
         connectingLabel.text = message
         connectingSpinner.startAnimating()
         retryButton.isHidden = true
+        changeIPButton.isHidden = true
         UIView.animate(withDuration: 0.3) { self.connectingOverlay.alpha = 1 }
         connectingOverlay.isHidden = false
     }
 
     private func showRetry() {
-        connectingLabel.text = "No se pudo conectar con el servidor"
+        connectingLabel.text = "No se pudo conectar con:\n\(serverBaseURL)\n\nVerifica que la Mac y el iPad estén en la misma red Wi-Fi."
         connectingSpinner.stopAnimating()
         retryButton.isHidden = false
+        changeIPButton.isHidden = false
     }
 
     private func hideConnecting() {
@@ -189,14 +216,14 @@ final class KioskViewController: UIViewController,
     // MARK: - Hidden settings button
 
     private func setupSettingsButton() {
-        let settingsBtn = UIButton(frame: CGRect(x: view.bounds.width - 100, y: 0, width: 100, height: 100))
-        settingsBtn.backgroundColor = .clear
-        settingsBtn.autoresizingMask = [.flexibleLeftMargin, .flexibleBottomMargin]
-        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(showSettings))
-        longPress.minimumPressDuration = 3.0
-        settingsBtn.addGestureRecognizer(longPress)
-        view.addSubview(settingsBtn)
-        view.bringSubviewToFront(settingsBtn)
+        settingsButton.setTitle("⚙️", for: .normal)
+        settingsButton.titleLabel?.font = UIFont.systemFont(ofSize: 18)
+        settingsButton.setTitleColor(UIColor.white.withAlphaComponent(0.4), for: .normal)
+        settingsButton.frame = CGRect(x: view.bounds.width - 60, y: 10, width: 50, height: 50)
+        settingsButton.autoresizingMask = [.flexibleLeftMargin, .flexibleBottomMargin]
+        settingsButton.addTarget(self, action: #selector(showSettings), for: .touchUpInside)
+        view.addSubview(settingsButton)
+        view.bringSubviewToFront(settingsButton)
     }
 
     // MARK: - Load kiosk
@@ -274,18 +301,19 @@ final class KioskViewController: UIViewController,
     @objc func showSettings() {
         loadingTimer?.invalidate()
         retryTimer?.invalidate()
-        let currentIP = UserDefaults.standard.string(forKey: "kioskIP") ?? "192.168.0.105"
-        let alert = UIAlertController(title: "⚙️ Servidor", message: "IP del servidor Node.js\n(ej: 192.168.0.105)", preferredStyle: .alert)
+        let currentSaved = sanitizeIP(UserDefaults.standard.string(forKey: "kioskIP") ?? "192.168.1.119")
+        let defaultPromptIP = currentSaved.isEmpty ? "192.168.1.119" : currentSaved
+        let alert = UIAlertController(title: "⚙️ Servidor", message: "IP del servidor Node.js\n(ej: \(defaultPromptIP))", preferredStyle: .alert)
         alert.addTextField { tf in
-            tf.text = currentIP
+            tf.text = defaultPromptIP
             tf.keyboardType = .numbersAndPunctuation
-            tf.placeholder = "192.168.0.105"
+            tf.placeholder = "192.168.1.119"
         }
         alert.addAction(UIAlertAction(title: "Cancelar", style: .cancel, handler: nil))
         alert.addAction(UIAlertAction(title: "Conectar", style: .default) { [weak self] _ in
-            if let newIP = alert.textFields?.first?.text, !newIP.isEmpty {
-                self?.serverIP = newIP
-            }
+            let rawInput = alert.textFields?.first?.text ?? defaultPromptIP
+            let finalIP = sanitizeIP(rawInput.isEmpty ? defaultPromptIP : rawInput)
+            self?.serverIP = finalIP
         })
         present(alert, animated: true)
     }
@@ -332,7 +360,7 @@ final class KioskViewController: UIViewController,
             img.src = 'data:image/jpeg;base64,\(base64)';
         })();
         """
-        webView.evaluateJavaScript(js, completionHandler: nil)
+        webView?.evaluateJavaScript(js, completionHandler: nil)
     }
 
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {

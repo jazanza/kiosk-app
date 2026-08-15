@@ -18,6 +18,9 @@ final class NativeScreensaverViewController: UIViewController {
 
     // Called when user taps to start the kiosk experience
     var onStart: (() -> Void)?
+    var onConfigureIP: (() -> Void)?
+
+    var serverIP: String = ""
 
     // Server base URL, set by AppDelegate after IP is configured
     var serverBaseURL: String = "" {
@@ -46,14 +49,12 @@ final class NativeScreensaverViewController: UIViewController {
     private var playerObserver: Any?
 
     // Overlay UI
-    // NOTE: gradientView is a dedicated UIView with a CAGradientLayer, inserted as a
-    // subview AFTER backgroundView so it renders on top of images (sublayers of view.layer
-    // render BEHIND subviews in UIKit — that was the original bug causing images to vanish).
     private let gradientView = UIView()
     private let gradientLayer = CAGradientLayer()
     private let brandLabel = UILabel()
     private let tapLabel = UILabel()
     private let metaLabel = UILabel()       // selfie name / promo text
+    private let settingsButton = UIButton(type: .system)
     private let loadingIndicator: UIActivityIndicatorView = {
         let s = UIActivityIndicatorView()
         s.style = .whiteLarge
@@ -105,9 +106,7 @@ final class NativeScreensaverViewController: UIViewController {
             backgroundView.addSubview(iv)
         }
 
-        // Gradient overlay: must be a subview AFTER backgroundView so it draws
-        // on top of images. If we add gradientLayer to view.layer directly, UIKit
-        // draws it behind all subviews (sublayer < subview in z-order).
+        // Gradient overlay
         gradientView.frame = view.bounds
         gradientView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         gradientView.isUserInteractionEnabled = false
@@ -124,15 +123,25 @@ final class NativeScreensaverViewController: UIViewController {
 
         // Brand label (top center)
         brandLabel.text = "🍺 CHIN CHIN"
-        brandLabel.font = UIFont(name: "AvenirNext-Heavy", size: 16) ?? UIFont.boldSystemFont(ofSize: 16)
+        brandLabel.font = UIFont(name: "AvenirNext-Heavy", size: 18) ?? UIFont.boldSystemFont(ofSize: 18)
         brandLabel.textColor = UIColor(red: 0.8, green: 1.0, blue: 0.0, alpha: 1.0) // brand neon
         brandLabel.textAlignment = .center
         brandLabel.alpha = 0.9
         brandLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(brandLabel)
 
+        // Discreet/Hidden Settings Button (top right corner, 80x80 touch target)
+        // Hidden from customers — double tap or tap to access admin config
+        settingsButton.setTitle("⚙️", for: .normal)
+        settingsButton.titleLabel?.font = UIFont.systemFont(ofSize: 14)
+        settingsButton.setTitleColor(UIColor.white.withAlphaComponent(0.20), for: .normal)
+        settingsButton.backgroundColor = .clear
+        settingsButton.translatesAutoresizingMaskIntoConstraints = false
+        settingsButton.addTarget(self, action: #selector(handleSettingsTap), for: .touchUpInside)
+        view.addSubview(settingsButton)
+
         // Selfie/promo meta label (bottom, above tap label)
-        metaLabel.font = UIFont(name: "AvenirNext-Bold", size: 13) ?? UIFont.boldSystemFont(ofSize: 13)
+        metaLabel.font = UIFont(name: "AvenirNext-Bold", size: 14) ?? UIFont.boldSystemFont(ofSize: 14)
         metaLabel.textColor = .white
         metaLabel.textAlignment = .center
         metaLabel.alpha = 0
@@ -141,7 +150,7 @@ final class NativeScreensaverViewController: UIViewController {
 
         // "TOCA PARA EMPEZAR" pulsing label (bottom)
         tapLabel.text = "TOCA PARA EMPEZAR"
-        tapLabel.font = UIFont(name: "AvenirNext-Heavy", size: 11) ?? UIFont.boldSystemFont(ofSize: 11)
+        tapLabel.font = UIFont(name: "AvenirNext-Heavy", size: 13) ?? UIFont.boldSystemFont(ofSize: 13)
         tapLabel.textColor = UIColor(red: 0.8, green: 1.0, blue: 0.0, alpha: 1.0)
         tapLabel.textAlignment = .center
         tapLabel.alpha = 1.0
@@ -158,6 +167,11 @@ final class NativeScreensaverViewController: UIViewController {
             brandLabel.topAnchor.constraint(equalTo: view.topAnchor, constant: 24),
             brandLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
 
+            settingsButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 10),
+            settingsButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
+            settingsButton.widthAnchor.constraint(equalToConstant: 60),
+            settingsButton.heightAnchor.constraint(equalToConstant: 60),
+
             tapLabel.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -28),
             tapLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
 
@@ -170,6 +184,10 @@ final class NativeScreensaverViewController: UIViewController {
         ])
 
         startPulseAnimation()
+    }
+
+    @objc private func handleSettingsTap() {
+        onConfigureIP?()
     }
 
     private func setupTapGesture() {
@@ -199,10 +217,21 @@ final class NativeScreensaverViewController: UIViewController {
 
         loadingIndicator.startAnimating()
 
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 4.0
+        config.timeoutIntervalForResource = 4.0
+        let session = URLSession(configuration: config)
+
+        session.dataTask(with: url) { [weak self] data, _, error in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.loadingIndicator.stopAnimating()
+
+                if let error = error {
+                    print("Screensaver API error or timeout: \(error.localizedDescription)")
+                    self.metaLabel.text = "⚠️ Servidor no conectado (\(self.serverIP))"
+                    self.metaLabel.alpha = 0.9
+                }
 
                 if let data = data,
                    let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
@@ -212,6 +241,7 @@ final class NativeScreensaverViewController: UIViewController {
                 if self.mediaItems.isEmpty {
                     self.showPlaceholderAnimation()
                 } else {
+                    self.metaLabel.alpha = 0
                     self.startSlideshow()
                 }
             }
@@ -372,10 +402,10 @@ final class NativeScreensaverViewController: UIViewController {
     private func showPlaceholderAnimation() {
         // Animated gradient as fallback — works 100% offline
         let colors: [[CGColor]] = [
-            [UIColor(red: 0.05, green: 0.05, blue: 0.05, alpha: 1).cgColor,
-             UIColor(red: 0.12, green: 0.10, blue: 0.02, alpha: 1).cgColor],
-            [UIColor(red: 0.02, green: 0.08, blue: 0.02, alpha: 1).cgColor,
-             UIColor(red: 0.15, green: 0.12, blue: 0.0, alpha: 1).cgColor],
+            [UIColor(red: 0.15, green: 0.15, blue: 0.15, alpha: 1).cgColor,
+             UIColor(red: 0.25, green: 0.22, blue: 0.10, alpha: 1).cgColor],
+            [UIColor(red: 0.10, green: 0.20, blue: 0.10, alpha: 1).cgColor,
+             UIColor(red: 0.35, green: 0.32, blue: 0.10, alpha: 1).cgColor],
         ]
         let bg = CAGradientLayer()
         bg.frame = view.bounds
